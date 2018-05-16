@@ -5,7 +5,6 @@
 #
 #################################################################
 PROGNAME=$(basename "$0")
-BOOTDEVSZ="500m"
 
 # Error-logging
 function err_exit {
@@ -21,6 +20,7 @@ then
     printf "Missing parameter(s). Valid flags/parameters are:\n"
     printf "\t-b|--bootlabel: FS-label applied to '/boot' filesystem\n"
     printf "\t-d|--disk: dev-path to disk to be partitioned\n"
+    printf "\t-p|--pv: dev-path to disk to be lvm physical volume\n"
     printf "\t-r|--rootlabel: FS-label to apply to '/' filesystem (no LVM in use)\n"
     printf "\t-v|--vgname: LVM2 Volume-Group name for root volumes\n"
     printf "Aborting...\n"
@@ -35,25 +35,24 @@ function LogBrk() {
 
 # Partition as LVM
 function CarveLVM() {
-   local ROOTVOL=(rootVol 4g)
-   local SWAPVOL=(swapVol 2g)
-   local HOMEVOL=(homeVol 1g)
-   local VARVOL=(varVol 2g)
-   local LOGVOL=(logVol 2g)
-   local AUDVOL=(auditVol 100%FREE)
+   local ROOTVOL=(root 4g)
+   local SWAPVOL=(swap 2g)
+   local HOMEVOL=(home 1g)
+   local VARVOL=(var 2g)
+   local LOGVOL=(log 2g)
+   local AUDVOL=(audit 100%FREE)
 
    # Clear the MBR and partition table
-   dd if=/dev/zero of="${CHROOTDEV}" bs=512 count=1000 > /dev/null 2>&1
+   dd if=/dev/zero of="${BOOTDEV}" bs=512 count=1000 > /dev/null 2>&1
 
    # Lay down the base partitions
-   parted -s "${CHROOTDEV}" -- mklabel msdos mkpart primary ext4 2048s ${BOOTDEVSZ} \
-      mkpart primary ext4 ${BOOTDEVSZ} 100% set 2 lvm
+   parted -s "${BOOTDEV}" -- mklabel msdos mkpart primary ext4 2048s ${BOOTDEVSZ} 100%
 
    # Stop/umount boot device, in case parted/udev/systemd managed to remount it
   systemctl stop boot.mount
 
    # Create LVM objects
-   vgcreate -y "${VGNAME}" "${CHROOTDEV}2" || LogBrk 5 "VG creation failed. Aborting!"
+   vgcreate -y "${VGNAME}" "${PVDEV}" || LogBrk 5 "VG creation failed. Aborting!"
    lvcreate --yes -W y -L "${ROOTVOL[1]}" -n "${ROOTVOL[0]}" "${VGNAME}" || LVCSTAT=1
    lvcreate --yes -W y -L "${SWAPVOL[1]}" -n "${SWAPVOL[0]}" "${VGNAME}" || LVCSTAT=1
    lvcreate --yes -W y -L "${HOMEVOL[1]}" -n "${HOMEVOL[0]}" "${VGNAME}" || LVCSTAT=1
@@ -81,7 +80,7 @@ function CarveLVM() {
   systemctl stop boot.mount
 
    # Create filesystems
-   mkfs -t ext4 -L "${BOOTLABEL}" "${CHROOTDEV}1" || err_exit "Failure creating filesystem - /boot"
+   mkfs -t ext4 -L "${BOOTLABEL}" "${BOOTDEV}1" || err_exit "Failure creating filesystem - /boot"
    mkfs -t ext4 "/dev/${VGNAME}/${ROOTVOL[0]}" || err_exit "Failure creating filesystem - /"
    mkfs -t ext4 "/dev/${VGNAME}/${HOMEVOL[0]}" || err_exit "Failure creating filesystem - /home"
    mkfs -t ext4 "/dev/${VGNAME}/${VARVOL[0]}" || err_exit "Failure creating filesystem - /var"
@@ -90,21 +89,20 @@ function CarveLVM() {
    mkswap "/dev/${VGNAME}/${SWAPVOL[0]}"
 
    # shellcheck disable=SC2053
-   if [[ $(e2label "${CHROOTDEV}1") != ${BOOTLABEL} ]]
+   if [[ $(e2label "${BOOTDEV}1") != ${BOOTLABEL} ]]
    then
-      e2label "${CHROOTDEV}1" "${BOOTLABEL}" || \
-         err_exit "Failed to apply desired label to ${CHROOTDEV}1"
+      e2label "${BOOTDEV}1" "${BOOTLABEL}" || \
+         err_exit "Failed to apply desired label to ${BOOTDEV}1"
    fi
 }
 
 # Partition with no LVM
 function CarveBare() {
    # Clear the MBR and partition table
-   dd if=/dev/zero of="${CHROOTDEV}" bs=512 count=1000 > /dev/null 2>&1
+   dd if=/dev/zero of="${BOOTDEV}" bs=512 count=1000 > /dev/null 2>&1
 
    # Lay down the base partitions
-   parted -s "${CHROOTDEV}" -- mklabel msdos mkpart primary ext4 2048s "${BOOTDEVSZ}" \
-      mkpart primary ext4 ${BOOTDEVSZ} 100%
+   parted -s "${CHROOTDEV}" -- mklabel msdos mkpart primary ext4 2048s 100%
 
    # Create FS on partitions
    mkfs -t ext4 -L "${BOOTLABEL}" "${CHROOTDEV}1"
@@ -116,7 +114,7 @@ function CarveBare() {
 ######################
 ## Main program-flow
 ######################
-OPTIONBUFR=$(getopt -o b:d:r:v: --long bootlabel:,disk:,rootlabel:,vgname: -n "${PROGNAME}" -- "$@")
+OPTIONBUFR=$(getopt -o b:d:p:r:v: --long bootlabel:,disk:,pv:,rootlabel:,vgname: -n "${PROGNAME}" -- "$@")
 
 eval set -- "${OPTIONBUFR}"
 
@@ -147,7 +145,20 @@ do
 	          exit 1
 	          ;;
 	       *)
-               CHROOTDEV=${2}
+               BOOTDEV=${2}
+	          shift 2;
+	       ;;
+	    esac
+	    ;;
+      -p|--pv)
+	    case "$2" in
+	       "")
+	          LogBrk 1 "Error: option required but not specified"
+	          shift 2;
+	          exit 1
+	          ;;
+	       *)
+               PVDEV=${2}
 	          shift 2;
 	       ;;
 	    esac

@@ -5,7 +5,7 @@
 #
 #################################################################
 CHROOT="${CHROOT:-/mnt/ec2-root}"
-TARGSWAP=${2:-/dev/VolGroup00/swapVol}
+TARGSWAP=${2:-/dev/vg01/swap}
 FSTAB="${CHROOT}/etc/fstab"
 
 # Check for arguments

@@ -3,27 +3,28 @@
 The primary expected use case for these scripts is in a network that is able to to reach Internet-hosted resources. In such usage-contexts, the tools would typically be executed similarly to:
 
 1. Launch an AMI to act as a build host
-2. Attach a 20GiB EBS to the build host
-3. Login to the build host and escalate privileges to root
-4. Clone this project to the build host (make sure the destination filesystem allows script-execution)
-5. Execute the following sequence:
+2. Attach a 1GiB EBS to the build host
+3. Attach a 20GiB EBS to the build host
+4. Login to the build host and escalate privileges to root
+5. Clone this project to the build host (make sure the destination filesystem allows script-execution)
+6. Execute the following sequence:
 
 ~~~
     cd /PROJECT/CLONE/PATH ; \
-      ./DiskSetup.sh -b /boot -v VolGroup00 -d /dev/xvdf ; \
-      ./MkChrootTree.sh	/dev/xvdf ; \
-      ./MkTabs.sh /dev/xvdf ; \
+      ./DiskSetup.sh -b /boot -v vg01 -d /dev/xvdb -p /dev/xvdc ; \
+      ./MkChrootTree.sh	/dev/xvdb /dev/xvdc ; \
+      ./MkTabs.sh /dev/xvdb ; \
       ./ChrootBuild.sh ; \
-      ./AWScliSetup.sh ; \
+      ./AWScliSetup.sh ; \ # currently broken
       ./ChrootCfg.sh ; \
-      ./GrubSetup.sh /dev/xvdf ; \
+      ./GrubSetup.sh /dev/xvdb ; \
       ./NetSet.sh ; \
       ./CleanChroot.sh ; \
       ./PreRelabel.sh	 ; \
       ./Umount.sh
 ~~~
 
-Once the above sequence exits successfully, an AMI may be created from the target-disk (/dev/xvdf in the example above):
+Once the above sequence exits successfully, an AMI may be created from the target-disk (/dev/xvdb in the example above):
 
 1. Shut down the build-host
 1. Detach boot EBS

@@ -50,10 +50,10 @@ then
     printf "net.ifnames=0 "
     # Enable FIPS mode ...and make it accept the /boot partition
     case "${FIPSDISABLE}" in
-       true|TRUE|1|on)
+       UNDEF|true|TRUE|1|on)
           printf "fips=0 boot=LABEL=/boot\"\n"
           ;;
-       UNDEF|''|false|FALSE|0)
+       ''|false|FALSE|0)
           printf "fips=1 boot=LABEL=/boot\"\n"
           ;;
     esac

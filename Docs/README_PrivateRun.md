@@ -10,13 +10,13 @@ The primary expected use case for these scripts is in a network that is able to 
 
 ~~~
     cd /PROJECT/CLONE/PATH ; \
-      ./DiskSetup.sh -b /boot -v VolGroup00 -d /dev/xvdf ; \
-      ./MkChrootTree.sh	/dev/xvdf ; \
-      ./MkTabs.sh /dev/xvdf ; \
+      ./DiskSetup.sh -b /boot -v vg01 -d /dev/xvdb -p /dev/xvdc ; \
+      ./MkChrootTree.sh	/dev/xvdb /dev/xvdc ; \
+      ./MkTabs.sh /dev/xvdb ; \
       ./ChrootBuild.sh -r <REPO_FILE_PATH> -b <REPOS_TO_ACTIVATE> -e rpm1,rpm2,@rpmgroup ; \
-      ./AWScliSetup.sh <CLI_URI_ROOT> <EPEL_FILE_PATH>; \
+      ./AWScliSetup.sh <CLI_URI_ROOT> <EPEL_FILE_PATH>; \ # currently broken
       ./ChrootCfg.sh ; \
-      ./GrubSetup.sh /dev/xvdf ; \
+      ./GrubSetup.sh /dev/xvdb ; \
       ./NetSet.sh ; \
       ./CleanChroot.sh ; \
       ./PreRelabel.sh	 ; \

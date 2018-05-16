@@ -7,7 +7,7 @@
 CHROOT=${CHROOT:-/mnt/ec2-root}
 CLOUDCFG="$CHROOT/etc/cloud/cloud.cfg"
 JRNLCNF="$CHROOT/etc/systemd/journald.conf"
-MAINTUSR="maintuser"
+MAINTUSR="centos"
 
 # Disable EPEL repos
 chroot "${CHROOT}" yum-config-manager --disable "*epel*" > /dev/null
@@ -39,7 +39,7 @@ fi
 rm "${CHROOT}/etc/localtime"
 cp "${CHROOT}/usr/share/zoneinfo/UTC" "${CHROOT}/etc/localtime"
 
-# Create maintuser
+# Create centos user
 CLINITUSR=$(grep -E "name: (maintuser|centos|ec2-user|cloud-user)" \
             "${CLOUDCFG}" | awk '{print $2}')
 
@@ -53,7 +53,7 @@ sed -i '/^system_info/,/^  ssh_svcname/d' "${CLOUDCFG}"
 sed -i '/syntax=yaml/i\
 system_info:\
   default_user:\
-    name: maintuser\
+    name: centos\
     lock_passwd: true\
     gecos: Local Maintenance User\
     groups: [wheel, adm]\
