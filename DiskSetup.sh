@@ -35,12 +35,12 @@ function LogBrk() {
 
 # Partition as LVM
 function CarveLVM() {
-   local ROOTVOL=(root 4g)
+   local ROOTVOL=(root 100%FREE)
    local SWAPVOL=(swap 2g)
    local HOMEVOL=(home 1g)
    local VARVOL=(var 2g)
    local LOGVOL=(log 2g)
-   local AUDVOL=(audit 100%FREE)
+   local AUDVOL=(audit 4g)
 
    # Clear the MBR and partition table
    dd if=/dev/zero of="${BOOTDEV}" bs=512 count=1000 > /dev/null 2>&1
